@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卓蘭好物網 | 百年客庄 ‧ 風土封藏</title>
+    
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brandRed: '#8C5A4C', /* 陶土紅 / 赭石：更溫潤的文青紅 */
+                        brandRedHover: '#6B4236',
+                        brandGreen: '#6E7F6A', /* 艾草綠：帶灰階的自然綠 */
+                        bgLight: '#FAF9F6', /* 宣紙白：帶有微黃的棉麻質感 */
+                        bgDark: '#33312E' /* 深墨灰：取代死黑，視覺更柔和 */
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                        serif: ['"Noto Serif TC"', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- 引入 Google Fonts (新增 Noto Serif TC 明體) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500&family=Noto+Serif+TC:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- 引入 Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* =========================================
+           儀式感轉場與動畫 CSS
+        ========================================= */
+        body {
+            background-color: #FAF9F6;
+            overflow-x: hidden;
+            color: #4A4542; /* 柔和的深咖色，取代純黑 */
+        }
+
+        /* 賦予所有標題文青的明體字型 */
+        h1, h2, h3, .font-serif {
+            font-family: 'Noto Serif TC', serif;
+            font-weight: 400;
+        }
+
+        /* 隱藏捲軸但保留捲動功能 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #FAF9F6; }
+        ::-webkit-scrollbar-thumb { background: #d1cbc3; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a096; }
+
+        /* 視圖切換的模糊淡入淡出動畫 */
+        .view-section {
+            display: none;
+            opacity: 0;
+            filter: blur(10px);
+            transform: scale(0.98);
+            transition: opacity 1.2s cubic-bezier(0.25, 0.1, 0.25, 1), 
+                        filter 1.2s cubic-bezier(0.25, 0.1, 0.25, 1), 
+                        transform 1.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        /* 強制重繪後加上 show 類別來啟動進場動畫 */
+        .view-section.show {
+            opacity: 1;
+            filter: blur(0px);
+            transform: scale(1);
+        }
+
+        .view-section.exiting {
+            display: block;
+            opacity: 0;
+            filter: blur(10px);
+            transform: scale(1.02);
+            transition: opacity 0.8s ease-in-out, filter 0.8s ease-in-out, transform 0.8s ease-in-out;
+        }
+
+        /* 滾動視差：元件浮現動畫 (對應 Framer Motion 的 fadeUp) */
+        .fade-up {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 1s ease-out, transform 1s ease-out;
+        }
+
+        .fade-up.in-view {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 迎賓讀取條動畫 */
+        @keyframes loadingLine {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        .animate-loading-line {
+            animation: loadingLine 2s linear infinite;
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased selection:bg-brandRed selection:text-white">
+
+    <!-- =========================================
+        視圖 0: 迎賓開場儀式 (Intro Splash)
+    ========================================= -->
+    <div id="view-intro" class="fixed inset-0 z-[100] bg-bgLight flex flex-col items-center justify-center transition-opacity duration-1500 ease-in-out">
+        <div class="flex flex-col items-center opacity-0 translate-y-5 transition-all duration-1000 ease-out" id="intro-content">
+            <i data-lucide="leaf" class="text-brandGreen mb-8 w-10 h-10" stroke-width="0.75"></i>
+            <h1 class="text-3xl md:text-5xl tracking-[0.5em] font-serif text-gray-800 ml-4">卓蘭好物網</h1>
+            <div class="mt-12 w-px h-20 bg-gray-200 overflow-hidden relative">
+                <div class="absolute top-0 w-full h-full bg-brandRed animate-loading-line"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================
+        共用組件：頂部導覽列
+    ========================================= -->
+    <nav id="navbar" class="fixed top-0 w-full z-40 bg-white/70 backdrop-blur-xl shadow-sm border-b border-gray-100/50 opacity-0 translate-y-[-10px] pointer-events-none transition-all duration-1000">
+        <div class="max-w-7xl mx-auto px-6 md:px-12 h-24 flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer group" onclick="switchView('home')">
+                <i data-lucide="leaf" class="text-brandGreen transition-transform duration-700 group-hover:rotate-12 w-7 h-7" stroke-width="1.5"></i>
+                <span class="font-bold text-xl md:text-2xl tracking-[0.2em] text-brandRed">卓蘭好物網</span>
+            </div>
+            
+            <div class="flex items-center gap-10">
+                <span onclick="switchView('story')" class="hidden md:block text-gray-500 hover:text-brandRed cursor-pointer transition-colors font-medium tracking-widest text-sm">產地紀實</span>
+                <span onclick="switchView('product')" class="hidden md:block text-gray-500 hover:text-brandRed cursor-pointer transition-colors font-medium tracking-widest text-sm">風土禮盒</span>
+                
+                <button onclick="toggleCart(true)" class="relative p-2 text-gray-800 hover:text-brandRed transition-colors">
+                    <i data-lucide="shopping-cart" class="w-6 h-6" stroke-width="1.5"></i>
+                    <!-- 購物車紅點 -->
+                    <span id="cart-badge" class="absolute top-0 right-0 bg-brandRed text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center translate-x-1 -translate-y-1 shadow-lg opacity-0 transform scale-0 transition-all duration-300">0</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- =========================================
+        主要內容容器
+    ========================================= -->
+    <main id="main-content" class="pt-24 min-h-screen">
+
+        <!-- 視圖 1: 主頁 (Home View) -->
+        <section id="view-home" class="view-section active">
+            <!-- 英雄區塊 -->
+            <div class="relative h-[90dvh] mx-4 md:mx-12 rounded-[2rem] overflow-hidden flex items-center justify-center mt-4 shadow-sm">
+                <div class="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat sepia-[.15]" style="background-image: url('https://images.unsplash.com/photo-1596199050105-6d5d32222916?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')">
+                    <!-- 溫暖的底片感遮罩 -->
+                    <div class="absolute inset-0 bg-gradient-to-b from-[#3E322C]/60 to-[#1A1816]/70 backdrop-blur-[1px]"></div>
+                </div>
+
+                <div class="relative z-10 text-center px-6 max-w-4xl fade-up">
+                    <span class="text-bgLight/80 tracking-[0.4em] text-xs md:text-sm uppercase mb-8 block font-light">Tech × Terroir</span>
+                    <h1 class="text-5xl md:text-7xl text-white mb-10 tracking-widest leading-[1.4] font-serif">
+                        一口鮮甜<br/><span class="text-bgLight">百年水土的傳承</span>
+                    </h1>
+                    <p class="text-base md:text-lg text-gray-200/90 mb-14 leading-loose font-light tracking-[0.15em]">
+                        從藤蔓下到餐桌，掃碼解鎖專屬產地日誌。
+                    </p>
+                    
+                    <div class="flex flex-col md:flex-row items-center justify-center gap-6">
+                        <button onclick="switchView('product')" class="group bg-brandRed text-bgLight px-12 py-5 rounded-none tracking-[0.2em] text-sm transition-all shadow-lg hover:bg-brandRedHover flex items-center gap-4">
+                            開啟風土禮盒 
+                            <i data-lucide="chevron-right" class="w-4 h-4 transition-transform group-hover:translate-x-2"></i>
+                        </button>
+                        <button onclick="switchView('story')" class="group bg-transparent border border-bgLight/30 text-bgLight px-12 py-5 rounded-none tracking-[0.2em] text-sm transition-all hover:bg-bgLight/10 flex items-center gap-4 backdrop-blur-sm">
+                            閱讀產地紀實
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 特色護城河 -->
+            <div class="py-32 bg-bgLight">
+                <div class="max-w-7xl mx-auto px-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-16 md:gap-24">
+                        <div class="flex flex-col items-center text-center group fade-up" style="transition-delay: 0s;">
+                            <i data-lucide="book-open" stroke-width="0.75" class="text-brandGreen mb-10 w-12 h-12 transition-transform duration-1000 group-hover:-translate-y-2"></i>
+                            <h3 class="text-2xl mb-5 text-gray-800 tracking-widest">動態產地紀實</h3>
+                            <p class="text-gray-500 leading-loose font-light tracking-wider text-sm">AI 輔助即時生成農法手札，<br/>看見客家農人的汗水與堅持。</p>
+                        </div>
+                        <div class="flex flex-col items-center text-center group fade-up" style="transition-delay: 0.2s;">
+                            <i data-lucide="snowflake" stroke-width="0.75" class="text-brandGreen mb-10 w-12 h-12 transition-transform duration-1000 group-hover:-translate-y-2"></i>
+                            <h3 class="text-2xl mb-5 text-gray-800 tracking-widest">預冷科技物流</h3>
+                            <p class="text-gray-500 leading-loose font-light tracking-wider text-sm">採用頂級預冷技術與抗壓包材，<br/>鎖住摘下那一刻的鮮甜。</p>
+                        </div>
+                        <div class="flex flex-col items-center text-center group fade-up" style="transition-delay: 0.4s;">
+                            <i data-lucide="shield-check" stroke-width="0.75" class="text-brandGreen mb-10 w-12 h-12 transition-transform duration-1000 group-hover:-translate-y-2"></i>
+                            <h3 class="text-2xl mb-5 text-gray-800 tracking-widest">無憂退款儀式</h3>
+                            <p class="text-gray-500 leading-loose font-light tracking-wider text-sm">100% 品質承諾，壞果拍照即退，<br/>消除一切生鮮網購疑慮。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 1. 饕客推薦我們的原因 -->
+            <div class="py-32 bg-white relative overflow-hidden border-t border-gray-100">
+                <!-- 視覺背景浮水印 -->
+                <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[15rem] md:text-[25rem] font-serif text-bgLight/60 whitespace-nowrap z-0 select-none pointer-events-none">O2O</div>
+                
+                <div class="max-w-5xl mx-auto px-6 relative z-10 text-center">
+                    <h2 class="text-3xl mb-20 tracking-widest text-gray-800 font-serif">饕客推薦我們的原因</h2>
+            <!-- 2. 哪些企業指名訂購 (帶有真實LOGO圖片，品牌名稱在下方) -->
+            <div class="py-32 bg-bgLight">
+                <div class="max-w-7xl mx-auto px-6 text-center">
+                    <h2 class="text-3xl mb-20 tracking-widest text-gray-800 font-serif">哪些品牌指名訂購卓蘭風土？</h2>
+                    
+                    <div class="flex flex-wrap justify-center gap-10 md:gap-16 mb-16">
+                        
+                        <!-- 國家兩廳院 -->
+                        <div class="flex flex-col items-center gap-5 fade-up group cursor-pointer" style="transition-delay: 0s;">
+                            <div class="w-28 h-28 md:w-32 md:h-32 rounded-full border border-gray-200 bg-white flex items-center justify-center shadow-sm group-hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2 overflow-hidden p-5">
+                                <img src="data:image/png;base64,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" alt="國家兩廳院 Logo" class="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-500 opacity-80 group-hover:opacity-100" onerror="this.onerror=null; this.src='https://placehold.co/200x200/ffffff/8C5A4C?text=國家\n兩廳院';">
+                            </div>
+                            <span class="text-sm tracking-widest text-gray-600 font-serif font-medium transition-colors duration-500 group-hover:text-brandRed">國家兩廳院</span>
+                        </div>
+
+                        <!-- 親子天下 -->
+                        <div class="flex flex-col items-center gap-5 fade-up group cursor-pointer" style="transition-delay: 0.1s;">
+                            <div class="w-28 h-28 md:w-32 md:h-32 rounded-full border border-gray-200 bg-white flex items-center justify-center shadow-sm group-hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2 overflow-hidden p-5">
+                                <img src="data:image/jpeg;base64,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" alt="親子天下 Logo" class="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-500 opacity-80 group-hover:opacity-100" onerror="this.onerror=null; this.src='https://placehold.co/200x200/ffffff/8C5A4C?text=親子\n天下';">
+                            </div>
+                            <span class="text-sm tracking-widest text-gray-600 font-serif font-medium transition-colors duration-500 group-hover:text-brandRed">親子天下</span>
+                        </div>
+
+                        <!-- 誠品生活 -->
+                        <div class="flex flex-col items-center gap-5 fade-up group cursor-pointer" style="transition-delay: 0.2s;">
+                            <div class="w-28 h-28 md:w-32 md:h-32 rounded-full border border-gray-200 bg-white flex items-center justify-center shadow-sm group-hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2 overflow-hidden p-5">
+                                <img src="data:image/png;base64,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" alt="誠品生活 Logo" class="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-500 opacity-80 group-hover:opacity-100" onerror="this.onerror=null; this.src='https://placehold.co/200x200/ffffff/8C5A4C?text=誠品\n生活';">
+                            </div>
+                            <span class="text-sm tracking-widest text-gray-600 font-serif font-medium transition-colors duration-500 group-hover:text-brandRed">誠品生活</span>
+                        </div>
+
+                        <!-- 天下雜誌 -->
+                        <div class="flex flex-col items-center gap-5 fade-up group cursor-pointer" style="transition-delay: 0.3s;">
+                            <div class="w-28 h-28 md:w-32 md:h-32 rounded-full border border-gray-200 bg-white flex items-center justify-center shadow-sm group-hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2 overflow-hidden p-5">
+                                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcReYhylPsT7SfxEOyWUo4wo_HvTEf8R-mJLyg&s" alt="天下雜誌 Logo" class="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-500 opacity-80 group-hover:opacity-100" onerror="this.onerror=null; this.src='https://placehold.co/200x200/ffffff/8C5A4C?text=天下\n雜誌';">
+                            </div>
+                            <span class="text-sm tracking-widest text-gray-600 font-serif font-medium transition-colors duration-500 group-hover:text-brandRed">天下雜誌</span>
+                        </div>
+
+                        <!-- Pinkoi -->
+                        <div class="flex flex-col items-center gap-5 fade-up group cursor-pointer" style="transition-delay: 0.4s;">
+                            <div class="w-28 h-28 md:w-32 md:h-32 rounded-full border border-gray-200 bg-white flex items-center justify-center shadow-sm group-hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2 overflow-hidden p-5">
+                                <img src="data:image/png;base64,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" alt="Pinkoi Logo" class="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-500 opacity-80 group-hover:opacity-100" onerror="this.onerror=null; this.src='https://placehold.co/200x200/ffffff/8C5A4C?text=Pinkoi';">
+                            </div>
+                            <span class="text-sm tracking-widest text-gray-600 font-serif font-medium transition-colors duration-500 group-hover:text-brandRed">Pinkoi</span>
+                        </div>
+
+                        <!-- ELLE -->
+                        <div class="flex flex-col items-center gap-5 fade-up group cursor-pointer" style="transition-delay: 0.5s;">
+                            <div class="w-28 h-28 md:w-32 md:h-32 rounded-full border border-gray-200 bg-white flex items-center justify-center shadow-sm group-hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2 overflow-hidden p-5">
+                                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAADhCAMAAAAJbSJIAAAAgVBMVEX///8jHyARCgwNAwaSkJGhn6AAAADn5ub09PTu7e0hHR44NTUWEBGMi4t8enuvrq5ST1C9vLxBPj9JRkaYl5f5+fnf3t4dGBmnpqYoIyVYVlawr680MDG8u7vr6+uFg4NlY2PGxcU9OTrR0dFeW1xvbW5/fn50cnLNzMxNSkstKSpmqZzXAAAD5ElEQVR4nO3ba3OiOgCA4QiKSKFVNOIFL3ht/f8/8IDuBSxIkrMznOx5n0/rTDPJqy5WmggBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+esMGvvbQrfqk/tPQP7Be2TRgtBqPx/HbXTyO43SZ3v+9XLfOJYuh059Dx1879WWup/nQx0RvxfwKT2ftpKX1Zo1DfN+XkRvknJ0/nx83Jy/MH3gf7bMVQ2f3oW4k8wfKyxTFTw+9YmTSm/v+SH1kaVLnKov17h/r3bwc1Xd6OSd6PDrG+UNXobAwcO9D+xpr/LlUrxgZ9HTyKpOG749H82K93uTliGqhkKfQpkIhzo5moRhNE6sK/XGiWSg2nlWFIvN0C/1Y5Urze7KuC/P1ahaKyK5C0dcu3FhWmGkXjiwr9LULpWWFQusTvyBjywpj3UJxtqzwrF34vtCZrPvCi3Zh37LCwevvQjWFi9fPydNk3Reum789FWoK9SbrvrBFtVDrK/d/oFBlvdXC/kB7sk4LBwrrrRbOLCtcKFwUq4U7xctoabJOC1Uu+9VC1Y/C0mSdFka6hfJkWeFJ4devSuEotKtQhrqFG8+uwkzla1C5UH7ZVShXuoU7x7WqsO+q3DT7VehvL2HPokJ/eFG7tfsoDA772Ctud1tSGLz9WK9yYbKffJy9xJrC5DT5uBbrVX+XFsucp4ktheFFFH+0ULo9X77SfAZ2XUuPPd1rqXi3q1Dt5nWlcG5Z4VC70D/YVSgPuoXibFehuPL9UNh+F2OmXfj338VYKN7QL03WaeG6fWPMU6Fs3HzTOFmnhSrr/b/dETaYzMrCsdp7ta7wqrQ7qq7w4/VfcquTVgv3L5+pukLPuHCktk2trvCi9lFcV5i83Dj4Zwu3XRTKQPc1HJoXHs0LVW59itrCbaJbeDQvzMwLU+PCY6hbuHaMC9cH40LFHSA1hRtHt3AWGhdGxq/h1rxw4OoW7hPjwunUtHBiXrjX/X8onaVpofSMC/vmhe7r3xzq9rUZF66NC2VqXJh5uoX70Ljw5JgWTlR3tX4vPDuahRsnMC1cu4lhof+lujP5W+Ekvel94mdBYFqY3QLDQv/qqu4ufy78XA0GqU7hzAt6hoVRPtSs8HhwlU8IPBXOvOh9sW/8vfT5vEW2W7pJcQ6ivbB83uI+9NIrhobthZXzFsP5/HPxpXrKo3ze4j5ptHTD1W5wa3oNv5+ZuT0OoRxaC5+Pr7z9GJquWgsrZ2am8eGmfFKnftI0T2h8lzadI1LYaNQ0sv0A1PO5J43TVv9ivQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwHb/AFxsU3zwhHZlAAAAAElFTkSuQmCC" alt="ELLE Logo" class="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-500 opacity-80 group-hover:opacity-100" onerror="this.onerror=null; this.src='https://placehold.co/200x200/ffffff/8C5A4C?text=ELLE';">
+                            </div>
+                            <span class="text-sm tracking-widest text-gray-600 font-serif font-medium transition-colors duration-500 group-hover:text-brandRed">ELLE 國際中文版</span>
+                        </div>
+
+                    </div>
+                    
+                    <button class="inline-flex flex-col items-center text-gray-400 hover:text-brandRed transition-colors fade-up group" style="transition-delay: 0.6s;">
+                        <i data-lucide="arrow-down-circle" stroke-width="0.75" class="w-10 h-10 mb-3 transition-transform duration-500 group-hover:translate-y-1"></i>
+                        <span class="text-xs tracking-[0.3em] uppercase">點擊展開更多</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. 用戶真心推薦 -->
+            <div class="py-32 bg-white">
+                <div class="max-w-6xl mx-auto px-6">
+                    <h2 class="text-3xl text-center mb-20 tracking-widest text-gray-800 font-serif">饕客真心推薦</h2>
+                    
+                    <!-- Tailwind CSS 的多欄 (Columns) 排版，完美實現瀑布流 -->
+                    <div class="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8">
+                        
+                        <!-- 評價卡片 1 -->
+                        <div class="break-inside-avoid border border-gray-200 rounded-[2rem] p-10 bg-white relative fade-up hover:border-brandRed/40 transition-colors shadow-sm group">
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="w-12 h-12 rounded-full border border-gray-100 flex items-center justify-center text-gray-500 font-serif bg-gray-50">U</div>
+                                <span class="text-sm tracking-widest text-gray-800 font-medium">Uber 團隊</span>
+                            </div>
+                            <p class="text-gray-600 text-sm leading-[2.2] tracking-[0.1em]">快速訂購、輕鬆送出充滿誠意的節慶禮盒，卓蘭鮮果的品質與包裝都讓我們非常滿意！</p>
+                        </div>
+
+                        <!-- 評價卡片 2 (帶有手繪感愛心點綴) -->
+                        <div class="break-inside-avoid border border-gray-200 rounded-[2rem] p-10 bg-white relative fade-up hover:border-brandRed/40 transition-colors shadow-sm group">
+                            <!-- 愛心裝飾 -->
+                            <div class="absolute -top-4 -right-4 text-brandRed transform rotate-12 drop-shadow-md z-10 transition-transform group-hover:scale-110">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" stroke="white" stroke-width="1.5"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                                <!-- 旁邊的黑色小圓點點綴 -->
+                                <div class="w-2 h-2 bg-gray-800 rounded-full absolute bottom-0 right-0 transform translate-x-1 translate-y-1"></div>
+                            </div>
+
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="w-12 h-12 rounded-full border border-gray-100 flex items-center justify-center text-gray-500 font-serif bg-gray-50">誠</div>
+                                <span class="text-sm tracking-widest text-gray-800 font-medium">誠品生活</span>
+                            </div>
+                            <p class="text-gray-600 text-sm leading-[2.2] tracking-[0.1em]">我們已經在卓蘭好物網平台上操作過許多次企業送禮。這裡的文創禮盒不只包裝精美、深具故事性，還能打造出可愛又豐富的味覺互動，讓我們的 VIP 顧客大受感動。在專案執行過程中，無論遇到任何疑難雜症，團隊都會迅速解答。未來我們也會繼續在這裡選購優質的風土禮盒 ✨</p>
+                        </div>
+
+                        <!-- 評價卡片 3 -->
+                        <div class="break-inside-avoid border border-gray-200 rounded-[2rem] p-10 bg-white relative fade-up hover:border-brandRed/40 transition-colors shadow-sm group">
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="w-12 h-12 rounded-full border border-gray-100 flex items-center justify-center text-gray-500 font-serif bg-gray-50">L</div>
+                                <span class="text-sm tracking-widest text-gray-800 font-medium">歐舒丹</span>
+                            </div>
+                            <p class="text-gray-600 text-sm leading-[2.2] tracking-[0.1em]">簡單好用，RAG 動態產地故事讓收到禮盒的貴賓能有有趣又充滿溫度的互動。</p>
+                        </div>
+
+                        <!-- 評價卡片 4 (帶有手繪感愛心點綴) -->
+                        <div class="break-inside-avoid border border-gray-200 rounded-[2rem] p-10 bg-white relative fade-up hover:border-brandRed/40 transition-colors shadow-sm group">
+                             <!-- 愛心裝飾 -->
+                             <div class="absolute -top-3 -right-2 text-brandRed transform -rotate-6 drop-shadow-md z-10 transition-transform group-hover:scale-110">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="white" stroke-width="1.5"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                                <div class="w-1.5 h-1.5 bg-gray-800 rounded-full absolute bottom-1 -right-1"></div>
+                            </div>
+
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="w-12 h-12 rounded-full border border-gray-100 flex items-center justify-center text-gray-500 font-serif bg-gray-50">H</div>
+                                <span class="text-sm tracking-widest text-gray-800 font-medium">Hahow 好學校</span>
+                            </div>
+                            <p class="text-gray-600 text-sm leading-[2.2] tracking-[0.1em]">更合理的成本、更深度的客庄文化體驗！產地直送的鮮果品質無可挑剔。</p>
+                        </div>
+                        
+                        <!-- 評價卡片 5 -->
+                        <div class="break-inside-avoid border border-gray-200 rounded-[2rem] p-10 bg-white relative fade-up hover:border-brandRed/40 transition-colors shadow-sm group">
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="w-12 h-12 rounded-full border border-gray-100 flex items-center justify-center text-gray-500 font-serif bg-gray-50">P</div>
+                                <span class="text-sm tracking-widest text-gray-800 font-medium">輝瑞</span>
+                            </div>
+                            <p class="text-gray-600 text-sm leading-[2.2] tracking-[0.1em]">邊品嚐鮮果邊學習！一起豐富客庄水土小常識，是非常棒的企業伴手禮。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="bg-bgDark text-gray-400 py-24 text-center mt-auto">
+                <div class="max-w-6xl mx-auto px-6 flex flex-col items-center">
+                    <i data-lucide="leaf" class="text-brandGreen mb-8 opacity-60 w-8 h-8" stroke-width="1"></i>
+                    <h2 class="text-xl font-light text-white tracking-[0.3em] mb-4">卓蘭好物網</h2>
+                    <p class="mb-12 opacity-50 text-sm tracking-widest">百年客庄 ‧ 風土封藏</p>
+                    <div class="w-px h-16 bg-gray-800 mb-12"></div>
+                    <div class="text-xs opacity-40 tracking-widest uppercase">
+                        &copy; <span id="year"></span> Zhuolan Terroir O2O. All rights reserved.
+                    </div>
+                </div>
+            </footer>
+        </section>
+
+        <!-- 視圖 2: 深度產地故事 (Story View) -->
+        <section id="view-story" class="view-section">
+            <div class="max-w-4xl mx-auto px-6 py-24 fade-up">
+                <button onclick="switchView('home')" class="flex items-center gap-3 text-gray-400 hover:text-brandRed transition-colors mb-20 tracking-[0.2em] text-xs uppercase group">
+                    <i data-lucide="arrow-left" class="w-4 h-4 transition-transform group-hover:-translate-x-2" stroke-width="1.5"></i> 返回前廳
+                </button>
+
+                <div class="flex items-center gap-4 mb-10">
+                    <i data-lucide="wind" class="text-brandGreen w-5 h-5" stroke-width="1"></i>
+                    <span class="tracking-[0.4em] text-brandGreen text-xs font-medium">客庄 RAG 數位導讀</span>
+                </div>
+                <h1 class="text-4xl md:text-5xl text-gray-800 mb-16 leading-[1.6] tracking-widest">
+                    尋根：<br/>藤蔓下的百年代碼
+                </h1>
+                
+                <div class="aspect-video w-full mb-20 overflow-hidden bg-gray-100 rounded-sm">
+                    <img src="https://ruralup.ardswc.gov.tw/backend/media/upload/%E7%AC%91%E5%B9%B4%E3%84%9F%E5%AE%89%E5%95%A6%E5%9C%98%E9%9A%8A%E5%8B%87%E5%A5%AA%E9%87%91%E7%8D%8E-1920.jpg" />
+                </div>
+
+                <div class="text-base text-gray-600 font-light tracking-[0.15em] leading-[2.2] mx-auto text-justify">
+                    <p class="mb-10">在苗栗卓蘭，高達 89.2% 的客庄人口守護著這片被稱為「水果之鄉」的土地。當你漫步在墾西坪的藤蔓下，那份靜謐中藏著先民百年來的治水與開墾智慧。</p>
+                    <p class="mb-10">我們導入了 RAG (檢索增強生成) 技術，不僅僅是為了科技，而是為了解鎖封存在泥土裡的記憶。當您掃描我們果園的專屬 QR Code，系統會即時調閱當地的農作日誌與家族史，為您生成一段專屬的文化敘事。</p>
+                    
+                    <blockquote class="border-l border-brandRed/50 pl-10 my-20">
+                        <p class="font-serif text-2xl text-gray-700 leading-loose tracking-widest">
+                            「這串葡萄的甜，不只是陽光與水，<br/>更是客家祖先一鑿一斧開墾出來的韌性。」
+                        </p>
+                    </blockquote>
+                    
+                    <p class="mb-20">在實體農場體驗完這份情感連結後，我們將這份感動延續至線上。不再是冰冷的購物車，而是一場文化的贊助與味蕾的傳承。</p>
+                </div>
+
+                <div class="text-center pt-20 border-t border-gray-200/50 mt-16">
+                    <button onclick="switchView('product')" class="bg-transparent border border-gray-400 text-gray-600 hover:border-brandRed hover:text-brandRed px-14 py-5 tracking-[0.3em] transition-all duration-700 uppercase text-xs">
+                        將這份故事帶回家
+                    </button>
+                </div>
+            </div>
+            
+            <footer class="bg-bgDark text-gray-400 py-24 text-center">
+                <div class="max-w-6xl mx-auto px-6 flex flex-col items-center">
+                    <i data-lucide="leaf" class="text-brandGreen mb-8 opacity-60 w-8 h-8" stroke-width="1"></i>
+                    <h2 class="text-xl font-light text-white tracking-[0.3em] mb-4">卓蘭好物網</h2>
+                    <p class="mb-12 opacity-50 text-sm tracking-widest">百年客庄 ‧ 風土封藏</p>
+                    <div class="w-px h-16 bg-gray-800 mb-12"></div>
+                </div>
+            </footer>
+        </section>
+
+        <!-- 視圖 3: 深度商品展示 (Product View) -->
+        <section id="view-product" class="view-section">
+            <div class="max-w-7xl mx-auto px-6 py-16 md:py-24 flex flex-col lg:flex-row gap-16 md:gap-24 fade-up">
+                <!-- 左側：大圖 -->
+                <div class="w-full lg:w-1/2">
+                    <button onclick="switchView('home')" class="flex items-center gap-3 text-gray-400 hover:text-brandRed transition-colors mb-12 tracking-[0.2em] text-xs uppercase group">
+                        <i data-lucide="arrow-left" class="w-4 h-4 transition-transform group-hover:-translate-x-2" stroke-width="1.5"></i>返回
+                    </button>
+                    <div class="aspect-[3/4] overflow-hidden bg-white p-6 md:p-10 flex items-center justify-center group relative shadow-sm border border-gray-100">
+                        <div class="absolute inset-0 bg-bgLight opacity-0 group-hover:opacity-100 transition-opacity duration-1000 z-0"></div>
+                        <img src="https://images.unsplash.com/photo-1596365548658-0051877a5eb8?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" alt="卓蘭四季風土箱" class="w-full h-full object-cover sepia-[.1] relative z-10 transition-transform duration-[3s] group-hover:scale-[1.03]" />
+                    </div>
+                </div>
+                
+                <!-- 右側：文案 -->
+                <div class="w-full lg:w-1/2 flex flex-col justify-center">
+                    <div class="text-xs tracking-[0.5em] text-brandGreen/80 mb-8 uppercase font-light">Limited Edition</div>
+                    <h1 class="text-4xl md:text-5xl text-gray-800 mb-10 leading-[1.4] tracking-widest font-serif">
+                        Tech × Terroir <br/>
+                        卓蘭四季風土箱
+                    </h1>
+                    
+                    <div class="w-8 h-px bg-brandRed/60 mb-10"></div>
+
+                    <p class="text-base text-gray-500 mb-14 leading-loose font-light tracking-[0.15em] text-justify">
+                        精選卓蘭特級巨峰葡萄，搭配客庄小農手熬果醬。我們摒棄過度包裝，採用在地文化印花布料作限量包裹。當您打開這只紙箱，撲鼻而來的是土地的誠實與歲月的溫柔。
+                    </p>
+                    
+                    <div class="mb-14">
+                        <span class="block text-xs text-gray-400 tracking-[0.3em] mb-4">禮遇價</span>
+                        <span class="text-4xl font-serif text-brandRed tracking-widest">NT$ 1,280</span>
+                    </div>
+                    
+                    <button onclick="addToCart()" class="w-full bg-bgDark hover:bg-brandRed text-bgLight px-10 py-6 text-xs tracking-[0.4em] uppercase transition-colors duration-700 flex justify-center items-center gap-4">
+                        封裝這份風土 <i data-lucide="shopping-cart" class="w-4 h-4" stroke-width="1.5"></i>
+                    </button>
+                    
+                    <div class="mt-12 flex items-center justify-center gap-10 border-t border-gray-200/50 pt-10">
+                        <div class="flex items-center gap-3 text-xs text-gray-400 tracking-[0.2em]">
+                            <i data-lucide="snowflake" class="w-4 h-4" stroke-width="1"></i>冷鏈直達
+                        </div>
+                        <div class="flex items-center gap-3 text-xs text-gray-400 tracking-[0.2em]">
+                            <i data-lucide="shield-check" class="w-4 h-4" stroke-width="1"></i>壞果包退
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="bg-bgDark text-gray-400 py-24 text-center">
+                <div class="max-w-6xl mx-auto px-6 flex flex-col items-center">
+                    <i data-lucide="leaf" class="text-brandGreen mb-8 opacity-60 w-8 h-8" stroke-width="1"></i>
+                    <h2 class="text-xl font-light text-white tracking-[0.3em] mb-4">卓蘭好物網</h2>
+                    <p class="mb-12 opacity-50 text-sm tracking-widest">百年客庄 ‧ 風土封藏</p>
+                    <div class="w-px h-16 bg-gray-800 mb-12"></div>
+                </div>
+            </footer>
+        </section>
+    </main>
+
+    <!-- =========================================
+        購物車 Drawer 面板
+    ========================================= -->
+    <!-- 遮罩層 -->
+    <div id="cart-overlay" class="fixed inset-0 bg-black/40 z-[60] backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-500" onclick="toggleCart(false)"></div>
+    
+    <!-- 側邊欄 -->
+    <div id="cart-drawer" class="fixed top-0 right-0 h-[100dvh] w-full max-w-md bg-white z-[70] shadow-2xl flex flex-col transform translate-x-full transition-transform duration-500 cubic-bezier(0.25, 0.1, 0.25, 1)">
+        <div class="p-8 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="text-lg font-light tracking-[0.2em] text-gray-900">購物車清單</h2>
+            <button onclick="toggleCart(false)" class="text-gray-400 hover:text-gray-900 transition-colors">
+                <i data-lucide="x" class="w-6 h-6" stroke-width="1"></i>
+            </button>
+        </div>
+
+        <div class="p-8 flex-1 overflow-y-auto bg-[#FDFBF7]/50" id="cart-content">
+            <!-- 空狀態 (預設) -->
+            <div id="cart-empty" class="text-center text-gray-400 py-20 font-light tracking-widest">購物車目前是空的</div>
+
+            <!-- 有商品狀態 (隱藏) -->
+            <div id="cart-items" class="hidden">
+                <div class="flex gap-6 items-center mb-10">
+                    <img src="https://images.unsplash.com/photo-1596365548658-0051877a5eb8?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" alt="卓蘭四季風土箱" class="w-24 h-24 object-cover shadow-md rounded-lg" />
+                    <div>
+                        <h4 class="font-bold text-gray-900 tracking-wider">卓蘭四季風土箱</h4>
+                        <p class="text-gray-400 text-sm mt-2">數量: 1</p>
+                        <div class="text-brandRed font-light text-lg mt-2 tracking-wider">NT$ 1,280</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 表單區 -->
+            <div class="mb-12 border border-gray-200 p-6 bg-white relative mt-8">
+                <div class="absolute -top-3 left-6 bg-white px-2 text-xs font-bold text-brandGreen tracking-widest">O2O 專屬密碼</div>
+                <div class="flex gap-4 mt-2">
+                    <input type="text" placeholder="輸入果園密碼享免運" class="flex-1 border-b border-gray-300 py-2 focus:border-brandRed outline-none bg-transparent text-sm tracking-wider" />
+                    <button class="text-xs tracking-widest uppercase font-bold text-gray-400 hover:text-gray-900 transition-colors">套用</button>
+                </div>
+            </div>
+
+            <h3 class="text-sm font-bold tracking-[0.2em] mb-6 text-gray-900">收件資訊</h3>
+            <form class="space-y-6" onsubmit="event.preventDefault();">
+                <input type="text" placeholder="收件人姓名" class="w-full border-b border-gray-300 py-3 focus:border-brandRed outline-none bg-transparent text-sm tracking-wider" required />
+                <input type="tel" placeholder="聯絡電話" class="w-full border-b border-gray-300 py-3 focus:border-brandRed outline-none bg-transparent text-sm tracking-wider" required />
+                <input type="text" placeholder="配送地址" class="w-full border-b border-gray-300 py-3 focus:border-brandRed outline-none bg-transparent text-sm tracking-wider" required />
+            </form>
+        </div>
+
+        <div class="p-8 border-t border-gray-100 bg-white">
+            <div class="flex justify-between items-end mb-8">
+                <span class="text-gray-500 text-sm tracking-widest">總金額</span>
+                <span class="text-2xl font-light text-gray-900 tracking-wider" id="cart-total">NT$ 0</span>
+            </div>
+            <button id="checkout-btn" disabled class="w-full py-5 text-sm tracking-[0.2em] transition-colors duration-500 uppercase bg-gray-100 text-gray-400 cursor-not-allowed">
+                確認結帳
+            </button>
+        </div>
+    </div>
+
+    <!-- =========================================
+        核心 JavaScript 邏輯
+    ========================================= -->
+    <script>
+        // 渲染 Lucide Icons
+        lucide.createIcons();
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        // --- 狀態變數 ---
+        let currentView = 'home';
+        let cartCount = 0;
+
+        // --- 迎賓開場儀式 ---
+        window.addEventListener('DOMContentLoaded', () => {
+            const introView = document.getElementById('view-intro');
+            const introContent = document.getElementById('intro-content');
+            const navbar = document.getElementById('navbar');
+
+            // 1. 內容向上浮現
+            setTimeout(() => {
+                introContent.classList.remove('opacity-0', 'translate-y-5');
+            }, 100);
+
+            // 2. 三秒後淡出 Intro，顯示 Navbar 與 Home
+            setTimeout(() => {
+                introView.style.opacity = '0';
+                
+                // === 修復：加入 show 類別，讓首頁內容跟著淡入浮現 ===
+                document.getElementById('view-home').classList.add('show');
+                
+                // 移除 Intro DOM
+                setTimeout(() => {
+                    introView.style.display = 'none';
+                    // 顯示導覽列
+                    navbar.classList.remove('opacity-0', 'translate-y-[-10px]', 'pointer-events-none');
+                    // 觸發 Intersection Observer 顯示首頁元素
+                    initScrollAnimations();
+                }, 1500);
+            }, 3000);
+        });
+
+        // --- 多重視圖切換邏輯 (儀式感轉場) ---
+        function switchView(targetViewId) {
+            if (currentView === targetViewId) return;
+
+            const oldView = document.getElementById(`view-${currentView}`);
+            const newView = document.getElementById(`view-${targetViewId}`);
+
+            // 1. 舊畫面開始退場 (加入模糊、放大、變淡)
+            oldView.classList.remove('active', 'show');
+            oldView.classList.add('exiting');
+
+            // 2. 等待舊畫面退場完畢後，切換 display 並讓新畫面進場
+            setTimeout(() => {
+                oldView.classList.remove('exiting');
+                window.scrollTo({ top: 0, behavior: 'instant' }); // 回到頂部
+
+                newView.classList.add('active');
+                
+                // 為了讓 CSS transition 觸發，需有一點延遲再加入 show
+                requestAnimationFrame(() => {
+                    newView.classList.add('show');
+                    initScrollAnimations(); // 重新綁定新畫面的滾動動畫
+                });
+
+                currentView = targetViewId;
+            }, 800); // 對應 CSS transition 0.8s
+        }
+
+        // --- 購物車邏輯 ---
+        const cartOverlay = document.getElementById('cart-overlay');
+        const cartDrawer = document.getElementById('cart-drawer');
+        const cartBadge = document.getElementById('cart-badge');
+        const cartEmpty = document.getElementById('cart-empty');
+        const cartItems = document.getElementById('cart-items');
+        const cartTotal = document.getElementById('cart-total');
+        const checkoutBtn = document.getElementById('checkout-btn');
+
+        function toggleCart(isOpen) {
+            if (isOpen) {
+                cartOverlay.classList.remove('opacity-0', 'pointer-events-none');
+                cartDrawer.classList.remove('translate-x-full');
+            } else {
+                cartOverlay.classList.add('opacity-0', 'pointer-events-none');
+                cartDrawer.classList.add('translate-x-full');
+            }
+        }
+
+        function addToCart() {
+            cartCount = 1; // 模擬只能加一份
+            updateCartUI();
+            toggleCart(true);
+        }
+
+        function updateCartUI() {
+            if (cartCount > 0) {
+                // 更新 Badge
+                cartBadge.textContent = cartCount;
+                cartBadge.classList.remove('opacity-0', 'scale-0');
+                cartBadge.classList.add('opacity-100', 'scale-100');
+                
+                // 更新面板內容
+                cartEmpty.classList.add('hidden');
+                cartItems.classList.remove('hidden');
+                cartTotal.textContent = 'NT$ 1,280';
+                
+                // 更新按鈕樣式
+                checkoutBtn.disabled = false;
+                checkoutBtn.className = "w-full py-5 text-sm tracking-[0.2em] transition-colors duration-500 uppercase bg-[#1a1a1a] hover:bg-brandRed text-white cursor-pointer";
+            }
+        }
+
+        // --- 滾動視差動畫 (Intersection Observer) ---
+        function initScrollAnimations() {
+            const elements = document.querySelectorAll('.fade-up:not(.in-view)');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('in-view');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { 
+                threshold: 0.1,
+                rootMargin: "0px 0px -50px 0px"
+            });
+
+            elements.forEach(el => observer.observe(el));
+        }
+
+        // 初次執行 (以防沒有透過 setTimeout 觸發)
+        setTimeout(initScrollAnimations, 4000);
+
+    </script>
+</body>
+</html>
